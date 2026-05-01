@@ -1,0 +1,33 @@
+import { 
+  BadRequestException, 
+  Controller, 
+  Post, 
+  UploadedFile, 
+  UseInterceptors,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadService } from './upload.service';
+
+@Controller('upload')
+export class UploadController {
+    constructor(private readonly uploadService: UploadService) {}
+
+    @Post()
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadFile(
+        @UploadedFile(
+            new ParseFilePipe({
+                validators: [
+                    new FileTypeValidator({ fileType: 'text/csv' }),
+                ],
+                fileIsRequired: true,
+            }),
+        )
+        file: Express.Multer.File,
+    ) {
+        return this.uploadService.processFile(file);
+    }
+}
