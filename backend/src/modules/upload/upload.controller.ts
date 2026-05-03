@@ -17,17 +17,7 @@ export class UploadController {
 
     @Post()
     @UseInterceptors(FileInterceptor('file'))
-    async uploadFile(
-        @UploadedFile(
-            new ParseFilePipe({
-                validators: [
-                    new FileTypeValidator({ fileType: 'text/csv' }),
-                ],
-                fileIsRequired: true,
-            }),
-        )
-        file: Express.Multer.File,
-    ) {
-        return this.uploadService.processFile(file);
-    }
+    async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  return this.uploadService.processFile(file);
+}
 }

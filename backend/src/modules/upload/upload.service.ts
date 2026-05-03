@@ -1,9 +1,23 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
+import { CacheService } from 'modules/classification/cache/cache.service';
+import { ClassificationService } from 'modules/classification/classification.service';
 
 @Injectable()
 export class UploadService {
+
+    constructor(
+        private readonly classificationService: ClassificationService,
+        private readonly cacheService: CacheService
+    ) {}
+
     processFile(file: Express.Multer.File) {
+        const tiposPermitidos = ['text/csv']
+
+        if (!tiposPermitidos.includes(file.mimetype) && !file.originalname.endsWith('.csv')) {
+        throw new BadRequestException(`Tipo de arquivo inválido: ${file.mimetype}`);
+        }
+
         if (!file.buffer || file.buffer.length === 0) {
             throw new BadRequestException('O arquivo enviado está vazio.');
         }
@@ -35,6 +49,16 @@ export class UploadService {
 
         const transactions = records.map((row: any, index: number) => {
             const amount = parseFloat(row.valor);
+            const description = row.descricao;           
+            let category = this.cacheService.get(description);
+
+            if (!category) {
+                category = this.classificationService.classify(description);
+            }
+
+            if (category) {
+                this.cacheService.set(description, category)
+            }
             
             if (isNaN(amount)) {
                 throw new BadRequestException(`Valor inválido na linha ${index + 1}: "${row.valor}" não é um número.`);
@@ -46,8 +70,9 @@ export class UploadService {
 
             return {
                 date: row.data,
-                description: row.descricao,
+                description,
                 amount: amount,
+                category: category || 'Outros'
             };
         });
 
