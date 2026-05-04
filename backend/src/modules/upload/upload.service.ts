@@ -2,16 +2,18 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse/sync';
 import { CacheService } from 'modules/classification/cache/cache.service';
 import { ClassificationService } from 'modules/classification/classification.service';
+import { OllamaService } from 'modules/classification/ollama/ollama.service';
 
 @Injectable()
 export class UploadService {
 
     constructor(
         private readonly classificationService: ClassificationService,
-        private readonly cacheService: CacheService
+        private readonly cacheService: CacheService,
+        private readonly ollamaService: OllamaService
     ) {}
 
-    processFile(file: Express.Multer.File) {
+    async processFile(file: Express.Multer.File) {
         const tiposPermitidos = ['text/csv']
 
         if (!tiposPermitidos.includes(file.mimetype) && !file.originalname.endsWith('.csv')) {
@@ -47,7 +49,8 @@ export class UploadService {
             throw new BadRequestException(`Colunas ausentes no CSV: ${missingColumns.join(', ')}`);
         }
 
-        const transactions = records.map((row: any, index: number) => {
+        const transactions = await Promise.all (
+            records.map(async (row: any, index: number) => {
             const amount = parseFloat(row.valor);
             const description = row.descricao;           
             let category = this.cacheService.get(description);
@@ -56,10 +59,14 @@ export class UploadService {
                 category = this.classificationService.classify(description);
             }
 
+            if (!category) {
+                category = await this.ollamaService.classify(description);
+            }
+
             if (category) {
                 this.cacheService.set(description, category)
             }
-            
+
             if (isNaN(amount)) {
                 throw new BadRequestException(`Valor inválido na linha ${index + 1}: "${row.valor}" não é um número.`);
             }
@@ -74,7 +81,8 @@ export class UploadService {
                 amount: amount,
                 category: category || 'Outros'
             };
-        });
+        })
+    );
 
         return transactions;
     }
