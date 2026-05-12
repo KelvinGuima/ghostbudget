@@ -3,6 +3,7 @@ import { parse } from 'csv-parse/sync';
 import { CacheService } from 'modules/classification/cache/cache.service';
 import { ClassificationService } from 'modules/classification/classification.service';
 import { OllamaService } from 'modules/classification/ollama/ollama.service';
+import { PrismaService } from 'common/prisma/prisma.service';
 
 @Injectable()
 export class UploadService {
@@ -10,14 +11,15 @@ export class UploadService {
     constructor(
         private readonly classificationService: ClassificationService,
         private readonly cacheService: CacheService,
-        private readonly ollamaService: OllamaService
-    ) {}
+        private readonly ollamaService: OllamaService,
+        private prisma: PrismaService,
+    ) { }
 
     async processFile(file: Express.Multer.File) {
         const tiposPermitidos = ['text/csv']
 
         if (!tiposPermitidos.includes(file.mimetype) && !file.originalname.endsWith('.csv')) {
-        throw new BadRequestException(`Tipo de arquivo inválido: ${file.mimetype}`);
+            throw new BadRequestException(`Tipo de arquivo inválido: ${file.mimetype}`);
         }
 
         if (!file.buffer || file.buffer.length === 0) {
@@ -31,7 +33,7 @@ export class UploadService {
             records = parse(content, {
                 columns: true,
                 skip_empty_lines: true,
-                trim: true, 
+                trim: true,
             });
         } catch (error) {
             throw new BadRequestException('Erro ao processar o CSV. Verifique a formatação.');
@@ -49,40 +51,47 @@ export class UploadService {
             throw new BadRequestException(`Colunas ausentes no CSV: ${missingColumns.join(', ')}`);
         }
 
-        const transactions = await Promise.all (
+        const transactions = await Promise.all(
             records.map(async (row: any, index: number) => {
-            const amount = parseFloat(row.valor);
-            const description = row.descricao;           
-            let category = this.cacheService.get(description);
+                const amount = parseFloat(row.valor);
+                const description = row.descricao;
+                let category = await this.cacheService.get(description);
 
-            if (!category) {
-                category = this.classificationService.classify(description);
-            }
+                if (!category) {
+                    category = this.classificationService.classify(description);
+                }
 
-            if (!category) {
-                category = await this.ollamaService.classify(description);
-            }
+                if (!category) {
+                    category = await this.ollamaService.classify(description);
+                }
 
-            if (category) {
-                this.cacheService.set(description, category)
-            }
+                if (category) {
+                    this.cacheService.set(description, category)
+                }
 
-            if (isNaN(amount)) {
-                throw new BadRequestException(`Valor inválido na linha ${index + 1}: "${row.valor}" não é um número.`);
-            }
+                if (isNaN(amount)) {
+                    throw new BadRequestException(`Valor inválido na linha ${index + 1}: "${row.valor}" não é um número.`);
+                }
 
-            if (!row.data) {
-                throw new BadRequestException(`Data ausente na linha ${index + 1}.`);
-            }
+                if (!row.data) {
+                    throw new BadRequestException(`Data ausente na linha ${index + 1}.`);
+                }
 
-            return {
-                date: row.data,
-                description,
-                amount: amount,
-                category: category || 'Outros'
-            };
-        })
-    );
+                return {
+                    date: row.data,
+                    description,
+                    amount: amount,
+                    category: category || 'Outros'
+                };
+
+            })
+
+
+        );
+
+        await this.prisma.transaction.createMany({
+            data:transactions,
+        });
 
         return transactions;
     }

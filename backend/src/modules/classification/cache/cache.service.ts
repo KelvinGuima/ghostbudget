@@ -1,14 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from 'common/prisma/prisma.service';
 
 @Injectable()
 export class CacheService {
-    private cache = new Map<string, string>();
+    constructor(private prisma: PrismaService) {}
 
-    get(description: string): string | null {
-        return this.cache.get(description) || null;
+    async get(description: string): Promise<string | null> {
+        const result = await this.prisma.classificationCache.findUnique({
+            where: { description },
+        })
+        return result?.category || null;
     }
-    
-    set(description: string, category: string) {
-        this.cache.set(description, category)
+
+    async set(description: string, category: string) {
+        await this.prisma.classificationCache.upsert({
+            where: {description},
+            update: {category},
+            create: {description,category},
+        })
     }
 }
