@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 300" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente do Ícone (Azul -> Roxo -> Verde) -->
+    <linearGradient id="logoGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00529b" />
+      <stop offset="50%" stop-color="#7a55a4" />
+      <stop offset="100%" stop-color="#6affb3" />
+    </linearGradient>
+
+    <!-- Efeito de Brilho (Glow) para a Seta -->
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Estilo Global -->
+    <style>
+      .title { font-family: 'Poppins', 'Segoe UI', sans-serif; font-size: 52px; font-weight: 700; fill: #ffffff; }
+      .subtitle { font-family: 'Poppins', 'Segoe UI', sans-serif; font-size: 20px; font-weight: 400; fill: #dddddd; }
+      .icon-stroke { fill: none; stroke: url(#logoGradient); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <!-- Fundo Escuro -->
+  <rect width="100%" height="100%" fill="#181a1f" />
+
+  <!-- =============================== -->
+  <!-- TEXTOS                          -->
+  <!-- =============================== -->
+  <text x="320" y="145" class="title">GhostBudget</text>
+  <text x="320" y="185" class="subtitle">Intelligent Financial Analysis</text>
+
+  <!-- =============================== -->
+  <!-- ÍCONE (Corrigido e Alinhado)    -->
+  <!-- =============================== -->
+  <g transform="translate(140, 85)">
+    
+    <!-- Corpo do Fantasma (Apenas o arco de cima) -->
+    <path class="icon-stroke" d="M 0,90 C 0,0 90,0 90,90" />
+    
+    <!-- Zigue-zague Base (Separado, na parte de baixo) -->
+    <path class="icon-stroke" d="M -15,120 L 25,155 L 65,115 L 110,150 L 130,130" />
+    
+    <!-- Linha do Gráfico (Passando bem LONGE dos olhos) -->
+    <!-- Sobe, desce e atira para a direita -->
+    <path class="icon-stroke" d="M -20,100 L 35,55 L 65,85 L 130,20" />
+
+    <!-- Olhos do Fantasma (Posicionados no alto, sem bater na linha) -->
+    <circle cx="35" cy="35" r="5" fill="#7a55a4" />
+    <circle cx="65" cy="40" r="5" fill="#7a55a4" />
+
+    <!-- Ponta da Seta Verde (Com brilho, apontando para cima/direita) -->
+    <!-- Ajustei as coordenadas para formar um triângulo certinho na ponta da linha -->
+    <polygon points="145,5 115,10 140,35" fill="#6affb3" filter="url(#glow)" />
+    
+  </g>
+</svg>
